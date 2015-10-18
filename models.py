@@ -48,6 +48,10 @@ class Conference(ndb.Model):
     maxAttendees    = ndb.IntegerProperty()
     seatsAvailable  = ndb.IntegerProperty()
 
+    @property
+    def sessions(self):
+        return Session.query(ancestor=self.key)
+
 class ConferenceForm(messages.Message):
     """ConferenceForm -- Conference outbound form message"""
     name            = messages.StringField(1)
@@ -95,3 +99,52 @@ class ConferenceQueryForms(messages.Message):
     """ConferenceQueryForms -- multiple ConferenceQueryForm inbound form message"""
     filters = messages.MessageField(ConferenceQueryForm, 1, repeated=True)
 
+class SessionTypes(messages.Enum)
+    """SessionTypes --- sessiontype enumeration value"""
+    N/A = 1
+    TBA = 2
+    WORKSHOP = 3
+    LECTURE = 4
+
+class Session(ndb.Model):
+    """Session -- Session object"""
+    name                = ndb.StringProperty(required=True)
+    highlights          = ndb.StringProperty()
+    speakerKey          = ndb.StringProperty()
+    speakerDisplayName  = ndb.StringProperty()
+    duration            = ndb.IntegerProperty()
+    typeOfSession       = ndb.StringProperty(default='TBA')
+    startDateTime       = ndb.DateTimeProperty()
+
+class SessionForm(messages.Message):
+    """SessionForm -- Session inbound form message"""
+    name                = messages.StringField(1)
+    highlights          = messages.StringField(2)
+    speakerKey          = messages.StringField(3)
+    speakerDisplayName  = messages.StringField(4)
+    duration            = messages.IntegerField(5)
+    typeOfSession       = messages.EnumField('SessionTypes', 6)
+    date                = messages.StringField(7)
+    startTime           = messages.StringField(8)
+    websafeKey          = messages.StringField(9)
+
+class SessionForms(messages.Message):
+    """SessionForms -- multiple Session outbound form message"""
+    items = messages.MessageField(SessionForm, 1, repeated=True)
+
+class Speaker(ndb.Model):
+    """Speaker -- Speaker object"""    
+    displayName = ndb.StringProperty(required=True)
+    profileKey  = ndb.StringProperty()
+    biography   = ndb.StringProperty()
+
+class SpeakerForm(messages.Message):
+    """SpeakerForm -- create Speaker form message"""
+    displayName = messages.StringField(1)
+    profileKey  = messages.StringField(2)
+    biography   = messages.StringField(3)
+    websafeKey  = messages.StringField(4)
+
+class SpeakerForms(messages.Message):
+    """SpeakerForm -- multiple Speaker outbound form message"""
+    items = messages.MessageField(SpeakerForm, 1, repeated=True)
