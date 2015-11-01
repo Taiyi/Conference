@@ -98,6 +98,17 @@ SESSION_WISH_REQUEST = endpoints.ResourceContainer(
     message_types.VoidMessage,
     websafeSessionKey=messages.StringField(1),
 )
+
+SPEAKER_GET_REQUEST = endpoints.ResourceContainer(
+    message_types.VoidMessage,
+    speaker=messages.StringField(1, required=True),
+)
+
+WISHLIST_POST_REQUEST = endpoints.ResourceContainer(
+    message_types.VoidMessage,
+    websafeSessionKey=messages.StringField(1, required=True),
+)
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 
@@ -314,7 +325,7 @@ class ConferenceApi(remote.Service):
     def getConferenceSessionsByType(self, request):
         """Given a conference, return all sessions of a specified type"""
         data = {field.name: getattr(request, field.name) for field in request.all_fields()}
-        typeOfSession = data['typeOfSession']
+        typeOfSession = str(data['typeOfSession'])
         conf = ndb.Key(urlsafe=request.websafeConferenceKey).get()
         if not conf:
             raise endpoints.NotFoundException(
@@ -331,7 +342,7 @@ class ConferenceApi(remote.Service):
         user = endpoints.get_current_user()
         if not user:
             raise endpoints.UnauthorizedException('Authorization required')
-        user_id = _getUserId()
+        user_id = _getUserId(user)
         if not request.name:
             raise endpoints.BadRequestException("Session 'name' field required")
         conf = ndb.Key(urlsafe=request.websafeConferenceKey).get()
@@ -350,19 +361,18 @@ class ConferenceApi(remote.Service):
         c_id = Session.allocate_ids(size=1, parent=p_key)[0]
         c_key = ndb.Key(Session, c_id, parent=p_key)
         data['key'] = c_key
-        data['organizerUserId'] = user_id
         del data['websafeConferenceKey']
         del data['websafeKey']
         Session(**data).put()
-        sessions = Session.query(Session.speaker == data['speaker'],
+        sessions = Session.query(Session.speaker == data['speakerDisplayName'],
             ancestor=p_key)
         if len(list(sessions)) > 1:
             cache_data = {}
-            cache_data['speaker'] = data['speaker']
+            cache_data['speakerDisplayName'] = data['speakerDisplayName']
             cache_data['sessionNames'] = [session.name for session in sessions]
             if not memcache.set('featured_speaker', cache_data):
                 logging.error('Memcache set failed.')
-        return request
+        return self._copySessionToForm(request)
 
     def _copySessionToForm(self, session):
         """Copy relevant fields from Session to SessionForm."""
@@ -378,8 +388,8 @@ class ConferenceApi(remote.Service):
         sf.check_initialized()
         return sf
 
-    @endpoints.method(SessionForm, SessionForm,
-            path='sessions',
+    @endpoints.method(SESSION_POST_REQUEST, SessionForm,
+            path='sessions/{websafeConferenceKey}',
             http_method='POST', name='createSession')
     
     def createSession(self, request):
@@ -424,7 +434,7 @@ class ConferenceApi(remote.Service):
     def getWorkshopSessions(self, request):
         """Returns workshop sessions """
         sessions = Session.query(ndb.AND(
-                Session.typeOfSession == 'workshop'
+                Session.typeOfSession == 'WORKSHOP'
                 ))
         return SessionForms(
             items=[self._copySessionToForm(session) for session in sessions]
@@ -436,7 +446,7 @@ class ConferenceApi(remote.Service):
     def getLectureSessions(self, request):
         """Returns lecture sessions"""
         sessions = Session.query(ndb.AND(
-                Session.typeOfSession == 'lecture'
+                Session.typeOfSession == 'LECTURE'
                 ))
         return SessionForms(
             items=[self._copySessionToForm(session) for session in sessions]

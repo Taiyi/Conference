@@ -99,9 +99,9 @@ class ConferenceQueryForms(messages.Message):
     """ConferenceQueryForms -- multiple ConferenceQueryForm inbound form message"""
     filters = messages.MessageField(ConferenceQueryForm, 1, repeated=True)
 
-class SessionTypes(messages.Enum)
+class SessionTypes(messages.Enum):
     """SessionTypes --- sessiontype enumeration value"""
-    N/A = 1
+    NA = 1
     TBA = 2
     WORKSHOP = 3
     LECTURE = 4
@@ -114,7 +114,8 @@ class Session(ndb.Model):
     speakerDisplayName  = ndb.StringProperty()
     duration            = ndb.IntegerProperty()
     typeOfSession       = ndb.StringProperty(default='TBA')
-    startDateTime       = ndb.DateTimeProperty()
+    startTime           = ndb.DateTimeProperty()
+    date                = ndb.DateTimeProperty()
 
 class SessionForm(messages.Message):
     """SessionForm -- Session inbound form message"""

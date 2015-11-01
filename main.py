@@ -11,6 +11,13 @@ class SetAnnouncementHandler(webapp2.RequestHandler):
         self.response.set_status(204)
 
 
+class SetFeaturedSpeakerHandler(webapp2.RequestHandler):
+    def post(self):
+        speaker = self.request.get('speaker')
+        ConferenceApi._cacheFeaturedSpeaker(speaker)
+        self.response.set_status(204)
+
+
 class SendConfirmationEmailHandler(webapp2.RequestHandler):
     def post(self):
         """Send email confirming Conference creation."""
